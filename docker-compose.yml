@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: tms-postgres
+    environment:
+      POSTGRES_DB: tms_spr
+      POSTGRES_USER: tms_user
+      POSTGRES_PASSWORD: tms_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - tms-network
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: tms-server
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://tms_user:tms_password@postgres:5432/tms_spr
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      GIT_REPO_PATH: /app/git-repos
+      PORT: 5000
+    volumes:
+      - git_repos:/app/git-repos
+      - ./uploads:/app/uploads
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+    networks:
+      - tms-network
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: tms-client
+    environment:
+      REACT_APP_API_URL: http://localhost:5000/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
+    networks:
+      - tms-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: tms-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - server
+      - client
+    networks:
+      - tms-network
+
+volumes:
+  postgres_data:
+  git_repos:
+
+networks:
+  tms-network:
+    driver: bridge 
