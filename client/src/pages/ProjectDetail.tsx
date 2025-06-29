@@ -238,12 +238,18 @@ const ProjectDetail: React.FC = () => {
       </div>
 
       {/* Кнопка создания тест-кейса */}
-      <div className="mb-6">
+      <div className="mb-6 flex gap-3">
         <button
           onClick={() => setShowCreateModal(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
           + Создать тест-кейс
+        </button>
+        <button
+          onClick={() => navigate(`/projects/${id}/test-cases`)}
+          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+        >
+          📁 Древовидное отображение
         </button>
       </div>
 

@@ -13,10 +13,12 @@ import testPlanRoutes from './routes/testPlans';
 import testRunRoutes from './routes/testRuns';
 import checklistRoutes from './routes/checklists';
 import gitRoutes from './routes/git';
+import testCaseSectionRoutes from './routes/testCaseSections';
 
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1); // Доверять первому прокси (nginx)
 const PORT = process.env.PORT || 5000;
 
 // Middleware безопасности
@@ -49,6 +51,7 @@ app.use('/api/test-plans', testPlanRoutes);
 app.use('/api/test-runs', testRunRoutes);
 app.use('/api/checklists', checklistRoutes);
 app.use('/api/git', gitRoutes);
+app.use('/api/test-case-sections', testCaseSectionRoutes);
 
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {

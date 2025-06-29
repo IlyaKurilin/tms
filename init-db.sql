@@ -38,6 +38,17 @@ CREATE TABLE test_plans (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Разделы для тест-кейсов
+CREATE TABLE test_case_sections (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+    parent_id INTEGER REFERENCES test_case_sections(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    order_index INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Создание тест-кейсов
 CREATE TABLE test_cases (
     id SERIAL PRIMARY KEY,
@@ -52,6 +63,7 @@ CREATE TABLE test_cases (
     status VARCHAR(20) DEFAULT 'draft',
     created_by INTEGER REFERENCES users(id),
     assigned_to INTEGER REFERENCES users(id),
+    section_id INTEGER REFERENCES test_case_sections(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

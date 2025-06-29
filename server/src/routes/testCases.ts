@@ -12,6 +12,20 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+// Получить тест-кейсы раздела
+router.get('/section/:sectionId', async (req: Request, res: Response) => {
+  try {
+    const { sectionId } = req.params;
+    const result = await query(
+      'SELECT * FROM test_cases WHERE section_id = $1 ORDER BY id DESC',
+      [sectionId]
+    );
+    return res.json(result.rows);
+  } catch (error) {
+    return res.status(500).json({ error: 'Ошибка получения тест-кейсов раздела' });
+  }
+});
+
 // Получить тест-кейсы проекта
 router.get('/project/:projectId', async (req: Request, res: Response) => {
   try {
@@ -46,6 +60,7 @@ router.post('/', async (req: Request, res: Response) => {
     const { 
       projectId, 
       testPlanId, 
+      sectionId,
       title, 
       description, 
       preconditions, 
@@ -61,10 +76,10 @@ router.post('/', async (req: Request, res: Response) => {
     
     const result = await query(
       `INSERT INTO test_cases (
-        project_id, test_plan_id, title, description, preconditions, 
+        project_id, test_plan_id, section_id, title, description, preconditions, 
         steps, expected_result, priority, status, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW()) RETURNING *`,
-      [projectId, testPlanId, title, description, preconditions, steps, expectedResult, priority || 'medium', status || 'draft']
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW()) RETURNING *`,
+      [projectId, testPlanId, sectionId, title, description, preconditions, steps, expectedResult, priority || 'medium', status || 'draft']
     );
     
     return res.status(201).json(result.rows[0]);
@@ -84,19 +99,23 @@ router.put('/:id', async (req: Request, res: Response) => {
       steps, 
       expectedResult, 
       priority, 
-      status 
+      status, 
+      sectionId,
+      section_id
     } = req.body;
     
     if (!title) {
       return res.status(400).json({ error: 'Заголовок обязателен' });
     }
     
+    const sectionIdToUse = section_id !== undefined ? section_id : sectionId;
+    
     const result = await query(
       `UPDATE test_cases SET 
         title = $1, description = $2, preconditions = $3, steps = $4, 
-        expected_result = $5, priority = $6, status = $7, updated_at = NOW() 
-       WHERE id = $8 RETURNING *`,
-      [title, description, preconditions, steps, expectedResult, priority, status, id]
+        expected_result = $5, priority = $6, status = $7, section_id = $8, updated_at = NOW() 
+       WHERE id = $9 RETURNING *`,
+      [title, description, preconditions, steps, expectedResult, priority, status, sectionIdToUse, id]
     );
     
     if (result.rows.length === 0) {
