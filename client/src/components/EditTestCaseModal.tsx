@@ -49,6 +49,7 @@ const EditTestCaseModal: React.FC<EditTestCaseModalProps> = ({
   });
   const [sections, setSections] = useState<TestCaseSection[]>([]);
   const [loadingSections, setLoadingSections] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (testCase) {
@@ -100,6 +101,11 @@ const EditTestCaseModal: React.FC<EditTestCaseModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.title.trim() || !formData.steps.trim() || !formData.expectedResult.trim()) {
+      setError('Поля "Заголовок", "Шаги выполнения" и "Ожидаемый результат" обязательны для заполнения.');
+      return;
+    }
+    setError(null);
     if (!testCase) return;
     onSave({
       ...testCase,
@@ -116,6 +122,9 @@ const EditTestCaseModal: React.FC<EditTestCaseModalProps> = ({
       <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">Редактировать тест-кейс</h2>
         <form id="edit-testcase-form" onSubmit={handleSubmit}>
+          {error && (
+            <div className="mb-4 text-red-600 text-sm font-medium">{error}</div>
+          )}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">Заголовок *</label>
             <input
@@ -168,6 +177,7 @@ const EditTestCaseModal: React.FC<EditTestCaseModalProps> = ({
               onChange={(e) => setFormData({ ...formData, steps: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={4}
+              required
             />
           </div>
           <div className="mb-4">
@@ -177,6 +187,7 @@ const EditTestCaseModal: React.FC<EditTestCaseModalProps> = ({
               onChange={(e) => setFormData({ ...formData, expectedResult: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={3}
+              required
             />
           </div>
           <div className="grid grid-cols-2 gap-4 mb-6">

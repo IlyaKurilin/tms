@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { PlayIcon, PauseIcon, StopIcon, InformationCircleIcon, CheckCircleIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import { TestCaseSidebarView } from './TestCaseSidebar.tsx';
 
 interface TestResult {
   id: number;
@@ -11,6 +13,9 @@ interface TestResult {
   duration?: number;
   executed_by_name?: string;
   executed_at?: string;
+  preconditions?: string;
+  steps?: string;
+  expected_result?: string;
 }
 
 interface TestRunResultsProps {
@@ -26,10 +31,17 @@ const TestRunResults: React.FC<TestRunResultsProps> = ({
 }) => {
   const [results, setResults] = useState<TestResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [timers, setTimers] = useState<{ [key: number]: number }>({}); // test_case_id: seconds
+  const [timerIntervals, setTimerIntervals] = useState<{ [key: number]: NodeJS.Timeout }>({});
 
   useEffect(() => {
     if (isOpen && testRunId) {
       fetchResults();
+    } else {
+      // Очищаем таймеры при закрытии модального окна
+      Object.values(timerIntervals).forEach(clearInterval);
+      setTimerIntervals({});
+      setTimers({});
     }
   }, [isOpen, testRunId]);
 
@@ -39,11 +51,49 @@ const TestRunResults: React.FC<TestRunResultsProps> = ({
       const response = await fetch(`/api/test-runs/${testRunId}/results`);
       const data = await response.json();
       setResults(data);
+      
+      // Инициализация таймеров для in_progress
+      const timersInit: { [key: number]: number } = {};
+      data.forEach((result: any) => {
+        if (result.status === 'in_progress' && result.executed_at) {
+          const started = new Date(result.executed_at).getTime();
+          const elapsedSeconds = Math.floor((Date.now() - started) / 1000);
+          timersInit[result.test_case_id] = Math.max(0, elapsedSeconds);
+        }
+      });
+      setTimers(timersInit);
     } catch (error) {
       console.error('Ошибка загрузки результатов:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Таймеры для in_progress
+  useEffect(() => {
+    // Очищаем старые интервалы
+    Object.values(timerIntervals).forEach(clearInterval);
+    
+    // Создаем новые интервалы для активных таймеров
+    const newIntervals: { [key: number]: NodeJS.Timeout } = {};
+    Object.entries(timers).forEach(([testCaseId, seconds]) => {
+      const interval = setInterval(() => {
+        setTimers(prev => ({ ...prev, [testCaseId]: prev[testCaseId] + 1 }));
+      }, 1000);
+      newIntervals[testCaseId] = interval;
+    });
+    
+    setTimerIntervals(newIntervals);
+    
+    return () => {
+      Object.values(newIntervals).forEach(clearInterval);
+    };
+  }, [timers]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
   };
 
   const updateTestResult = async (testCaseId: number, status: string, notes?: string) => {
@@ -64,6 +114,33 @@ const TestRunResults: React.FC<TestRunResultsProps> = ({
         setResults(results.map(result => 
           result.test_case_id === testCaseId ? { ...result, ...updatedResult } : result
         ));
+        
+        // Обработка таймеров при изменении статуса
+        if (status === 'in_progress') {
+          // Запускаем таймер для нового in_progress
+          if (!timers[testCaseId]) {
+            setTimers(prev => ({ ...prev, [testCaseId]: 0 }));
+          }
+        } else {
+          // Останавливаем таймер для других статусов
+          if (timers[testCaseId] !== undefined) {
+            setTimers(prev => {
+              const newTimers = { ...prev };
+              delete newTimers[testCaseId];
+              return newTimers;
+            });
+            
+            // Очищаем интервал
+            if (timerIntervals[testCaseId]) {
+              clearInterval(timerIntervals[testCaseId]);
+              setTimerIntervals(prev => {
+                const newIntervals = { ...prev };
+                delete newIntervals[testCaseId];
+                return newIntervals;
+              });
+            }
+          }
+        }
       } else {
         const error = await response.json();
         alert(error.error || 'Ошибка обновления результата');
@@ -130,6 +207,21 @@ const TestRunResults: React.FC<TestRunResultsProps> = ({
     }
   };
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'passed':
+        return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
+      case 'failed':
+        return <CheckCircleIcon className="w-5 h-5 text-red-500" />;
+      case 'blocked':
+        return <InformationCircleIcon className="w-5 h-5 text-yellow-500" />;
+      case 'not_run':
+        return <InformationCircleIcon className="w-5 h-5 text-gray-500" />;
+      default:
+        return <InformationCircleIcon className="w-5 h-5 text-gray-500" />;
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -153,43 +245,55 @@ const TestRunResults: React.FC<TestRunResultsProps> = ({
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-6">
               {results.map((result) => (
-                <div key={result.id} className="border rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-medium text-gray-900 mb-1">
-                        {result.test_case_title}
-                      </h3>
-                      {result.test_case_description && (
-                        <p className="text-gray-600 text-sm mb-2">{result.test_case_description}</p>
-                      )}
-                      <div className="flex items-center space-x-3">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPriorityColor(result.test_case_priority)}`}>
-                          {getPriorityText(result.test_case_priority)}
-                        </span>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(result.status)}`}>
-                          {getStatusText(result.status)}
-                        </span>
+                <div key={result.id} className="border rounded-lg p-6 bg-gray-50 shadow-sm">
+                  {/* Заголовок и статус */}
+                  <div className="flex justify-between items-start mb-4 pb-4 border-b">
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-1">{result.test_case_title}</h3>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${getPriorityColor(result.test_case_priority)}`}>{getPriorityText(result.test_case_priority)}</span>
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(result.status)}`}>{getStatusText(result.status)}</span>
                         {result.executed_by_name && (
-                          <span className="text-sm text-gray-500">
-                            Выполнил: {result.executed_by_name}
-                          </span>
+                          <span className="text-xs text-gray-500 ml-2">Выполнил: {result.executed_by_name}</span>
                         )}
                         {result.executed_at && (
-                          <span className="text-sm text-gray-500">
-                            {new Date(result.executed_at).toLocaleString('ru-RU')}
-                          </span>
+                          <span className="text-xs text-gray-500 ml-2">{new Date(result.executed_at).toLocaleString('ru-RU')}</span>
                         )}
                       </div>
                     </div>
+                    {/* Таймер */}
+                    {result.status === 'in_progress' && (
+                      <div className="flex flex-col items-end">
+                        <span className="text-xs text-gray-500 mb-1">Таймер</span>
+                        <span className="font-mono text-lg text-blue-600">{formatTime(timers[result.test_case_id] || 0)}</span>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Статус
-                      </label>
+                  {/* Детали тест-кейса */}
+                  <TestCaseSidebarView
+                    testCase={{
+                      id: result.test_case_id,
+                      title: result.test_case_title,
+                      description: result.test_case_description,
+                      preconditions: result.preconditions,
+                      steps: result.steps,
+                      expectedResult: result.expected_result,
+                      priority: result.test_case_priority,
+                      status: result.status,
+                      createdAt: result.executed_at,
+                    }}
+                    getPriorityColor={getPriorityColor}
+                    getStatusIcon={getStatusIcon}
+                    getStatusColor={getStatusColor}
+                  />
+
+                  {/* Статус и заметки */}
+                  <div className="pt-4 mt-4 border-t">
+                    <div className="mb-3">
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Статус</label>
                       <select
                         value={result.status}
                         onChange={(e) => updateTestResult(result.test_case_id, e.target.value)}
@@ -199,13 +303,11 @@ const TestRunResults: React.FC<TestRunResultsProps> = ({
                         <option value="passed">Пройден</option>
                         <option value="failed">Провален</option>
                         <option value="blocked">Заблокирован</option>
+                        <option value="in_progress">В процессе</option>
                       </select>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Заметки
-                      </label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Заметки</label>
                       <textarea
                         value={result.notes || ''}
                         onChange={(e) => updateTestResult(result.test_case_id, result.status, e.target.value)}

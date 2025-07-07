@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FolderIcon, DocumentTextIcon, ChevronRightIcon, ChevronDownIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import CreateTestCaseModal from './CreateTestCaseModal.tsx';
 
 interface TestCaseSection {
   id: number;
@@ -71,6 +72,10 @@ const TestCaseTree: React.FC<TestCaseTreeProps> = ({
   const [sectionToEdit, setSectionToEdit] = useState<TestCaseSection | null>(null);
   const [editSectionName, setEditSectionName] = useState('');
   const [editSectionParentId, setEditSectionParentId] = useState<number | null>(null);
+
+  // Модалка создания тест-кейса
+  const [showCreateCaseModal, setShowCreateCaseModal] = useState(false);
+  const [createCaseSectionId, setCreateCaseSectionId] = useState<number | null>(null);
 
   // Загрузка данных
   useEffect(() => {
@@ -234,6 +239,7 @@ const TestCaseTree: React.FC<TestCaseTreeProps> = ({
       priority: testCase.priority,
       status: testCase.status,
       section_id: sectionId,
+      test_plan_id: testCase.test_plan_id || null,
     };
     try {
       const response = await fetch(`/api/test-cases/${testCaseId}`, {
@@ -397,11 +403,11 @@ const TestCaseTree: React.FC<TestCaseTreeProps> = ({
           
           {/* Кнопки действий */}
           {!isEditing && (
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+            <div className="flex items-center gap-1">
               <button
-                onClick={() => setShowCreateSection(true)}
+                onClick={() => handleOpenCreateCase(section.id)}
                 className="p-1 hover:bg-gray-200 rounded"
-                title="Создать подраздел"
+                title="Создать тест-кейс"
               >
                 <PlusIcon className="w-3 h-3" />
               </button>
@@ -483,22 +489,63 @@ const TestCaseTree: React.FC<TestCaseTreeProps> = ({
   // Тест-кейсы без раздела
   const unassignedTestCases = getSectionTestCases(null);
 
+  // Открытие модалки создания тест-кейса
+  const handleOpenCreateCase = (sectionId: number | null) => {
+    setCreateCaseSectionId(sectionId);
+    setShowCreateCaseModal(true);
+  };
+
+  // Создание тест-кейса
+  const handleCaseCreated = async (testCaseData: any) => {
+    try {
+      // Удаляю section_id, оставляю только sectionId для backend
+      const payload = { ...testCaseData };
+      if (payload.section_id !== undefined) {
+        delete payload.section_id;
+      }
+      const response = await fetch('/api/test-cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (response.ok) {
+        setShowCreateCaseModal(false);
+        setCreateCaseSectionId(null);
+        loadData();
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Ошибка создания тест-кейса');
+      }
+    } catch (error) {
+      alert('Ошибка создания тест-кейса');
+    }
+  };
+
   if (loading) {
     return <div className="p-4 text-center text-gray-500">Загрузка...</div>;
   }
 
   return (
     <div className="space-y-4">
-      {/* Заголовок с кнопкой создания раздела */}
-      <div className="flex items-center justify-between">
+      {/* Заголовок с кнопками создания */}
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-lg font-semibold">Структура тест-кейсов</h3>
-        <button
-          onClick={() => setShowCreateSection(true)}
-          className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-        >
-          <PlusIcon className="w-4 h-4" />
-          Создать раздел
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleOpenCreateCase(null)}
+            className="flex items-center gap-1 px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Создать тест-кейс
+          </button>
+          <button
+            onClick={() => setShowCreateSection(true)}
+            className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
+          >
+            <PlusIcon className="w-4 h-4" />
+            Создать раздел
+          </button>
+        </div>
       </div>
 
       {/* Модалка создания раздела */}
@@ -667,16 +714,16 @@ const TestCaseTree: React.FC<TestCaseTreeProps> = ({
         </div>
       )}
 
-      {/* Кнопка создания тест-кейса */}
-      <div className="pt-4 border-t">
-        <button
-          onClick={onTestCaseCreate}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-        >
-          <PlusIcon className="w-4 h-4" />
-          Создать тест-кейс
-        </button>
-      </div>
+      {/* Модалка создания тест-кейса */}
+      {showCreateCaseModal && (
+        <CreateTestCaseModal
+          isOpen={showCreateCaseModal}
+          onClose={() => setShowCreateCaseModal(false)}
+          projectId={projectId}
+          sectionId={createCaseSectionId}
+          onSave={handleCaseCreated}
+        />
+      )}
 
       {/* Модалка подтверждения удаления раздела */}
       {showDeleteSectionModal && sectionToDelete && (

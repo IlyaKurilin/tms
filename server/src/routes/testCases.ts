@@ -70,10 +70,6 @@ router.post('/', async (req: Request, res: Response) => {
       status 
     } = req.body;
     
-    if (!projectId || !title) {
-      return res.status(400).json({ error: 'ID проекта и заголовок обязательны' });
-    }
-    
     const result = await query(
       `INSERT INTO test_cases (
         project_id, test_plan_id, section_id, title, description, preconditions, 
@@ -92,36 +88,41 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { 
-      title, 
-      description, 
-      preconditions, 
-      steps, 
-      expectedResult, 
-      priority, 
-      status, 
-      sectionId,
-      section_id
-    } = req.body;
-    
-    if (!title) {
-      return res.status(400).json({ error: 'Заголовок обязателен' });
+    // Получаем текущий тест-кейс
+    const currentResult = await query('SELECT * FROM test_cases WHERE id = $1', [id]);
+    if (currentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Тест-кейс не найден' });
     }
-    
-    const sectionIdToUse = section_id !== undefined ? section_id : sectionId;
-    
+    const current = currentResult.rows[0];
+    // Берём новые значения из body, если не передано — используем старое
+    const {
+      title = current.title,
+      description = current.description,
+      preconditions = current.preconditions,
+      steps = current.steps,
+      expectedResult,
+      expected_result,
+      priority = current.priority,
+      status = current.status,
+      sectionId,
+      section_id,
+      test_plan_id,
+      testPlanId
+    } = req.body;
+    // expected_result поддерживает оба варианта
+    const expectedResultFinal = expected_result !== undefined ? expected_result : (expectedResult !== undefined ? expectedResult : current.expected_result);
+    const sectionIdToUse = section_id !== undefined ? section_id : (sectionId !== undefined ? sectionId : current.section_id);
+    const testPlanIdToUse = test_plan_id !== undefined ? test_plan_id : (testPlanId !== undefined ? testPlanId : current.test_plan_id);
     const result = await query(
       `UPDATE test_cases SET 
         title = $1, description = $2, preconditions = $3, steps = $4, 
-        expected_result = $5, priority = $6, status = $7, section_id = $8, updated_at = NOW() 
-       WHERE id = $9 RETURNING *`,
-      [title, description, preconditions, steps, expectedResult, priority, status, sectionIdToUse, id]
+        expected_result = $5, priority = $6, status = $7, section_id = $8, test_plan_id = $9, updated_at = NOW() 
+       WHERE id = $10 RETURNING *`,
+      [title, description, preconditions, steps, expectedResultFinal, priority, status, sectionIdToUse, testPlanIdToUse, id]
     );
-    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Тест-кейс не найден' });
     }
-    
     return res.json(result.rows[0]);
   } catch (error) {
     return res.status(500).json({ error: 'Ошибка обновления тест-кейса' });

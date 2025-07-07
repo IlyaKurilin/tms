@@ -188,6 +188,10 @@ router.get('/:id/results', async (req: Request, res: Response) => {
         tc.title as test_case_title,
         tc.description as test_case_description,
         tc.priority as test_case_priority,
+        tc.section_id as section_id,
+        tc.preconditions as preconditions,
+        tc.steps as steps,
+        tc.expected_result as expected_result,
         u.username as executed_by_name
       FROM test_results tr
       LEFT JOIN test_cases tc ON tr.test_case_id = tc.id
@@ -216,11 +220,25 @@ router.put('/:id/results/:testCaseId', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Статус обязателен' });
     }
     
+    // Если статус меняется на in_progress и executed_at еще не установлен, устанавливаем его
+    let executedAt = null;
+    if (status === 'in_progress') {
+      // Проверяем, есть ли уже executed_at
+      const existingResult = await query(
+        'SELECT executed_at FROM test_results WHERE test_run_id = $1 AND test_case_id = $2',
+        [id, testCaseId]
+      );
+      
+      if (existingResult.rows.length > 0 && !existingResult.rows[0].executed_at) {
+        executedAt = new Date();
+      }
+    }
+    
     const result = await query(
       `UPDATE test_results 
-       SET status = $1, notes = $2, duration = $3, executed_by = $4, executed_at = NOW()
-       WHERE test_run_id = $5 AND test_case_id = $6 RETURNING *`,
-      [status, notes, duration, 1, id, testCaseId] // TODO: использовать реального пользователя
+       SET status = $1, notes = $2, duration = $3, executed_by = $4, executed_at = COALESCE($5, executed_at)
+       WHERE test_run_id = $6 AND test_case_id = $7 RETURNING *`,
+      [status, notes, duration, 1, executedAt, id, testCaseId] // TODO: использовать реального пользователя
     );
     
     if (result.rows.length === 0) {

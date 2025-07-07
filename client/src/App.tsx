@@ -8,6 +8,8 @@ import TestCases from './pages/TestCases.tsx';
 import TestPlans from './pages/TestPlans.tsx';
 import TestRuns from './pages/TestRuns.tsx';
 import Login from './pages/Login.tsx';
+import TestPlanDetail from './pages/TestPlanDetail.tsx';
+import TestRunDetail from './pages/TestRunDetail.tsx';
 import { AuthProvider } from './contexts/AuthContext.tsx';
 
 function App() {
@@ -22,7 +24,9 @@ function App() {
           <Route path="projects/:projectId/test-cases" element={<TestCases />} />
           <Route path="test-cases" element={<TestCases />} />
           <Route path="test-plans" element={<TestPlans />} />
+          <Route path="test-plans/:id" element={<TestPlanDetail />} />
           <Route path="test-runs" element={<TestRuns />} />
+          <Route path="test-runs/:id" element={<TestRunDetail />} />
         </Route>
       </Routes>
     </AuthProvider>

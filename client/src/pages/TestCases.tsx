@@ -81,10 +81,16 @@ const TestCases: React.FC = () => {
 
   const handleCreateTestCase = async (testCaseData: any) => {
     try {
+      // Преобразуем sectionId в section_id для backend
+      const payload = { ...testCaseData };
+      if (payload.sectionId !== undefined) {
+        payload.section_id = payload.sectionId;
+        delete payload.sectionId;
+      }
       const response = await fetch('/api/test-cases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(testCaseData),
+        body: JSON.stringify(payload),
       });
       if (response.ok) {
         const newTestCase = await response.json();

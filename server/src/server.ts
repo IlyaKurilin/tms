@@ -30,8 +30,8 @@ app.use(cors({
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 минут
-  max: 100 // максимум 100 запросов с одного IP
+  windowMs: 5 * 60 * 1000, // 5 минут
+  max: 1000 // максимум 1000 запросов с одного IP
 });
 app.use(limiter);
 
@@ -72,7 +72,6 @@ app.use('*', (req: Request, res: Response) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// Запуск сервера
 async function startServer() {
   try {
     await connectDB();

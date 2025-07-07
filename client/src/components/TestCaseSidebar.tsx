@@ -101,12 +101,12 @@ const TestCaseSidebar: React.FC<TestCaseSidebarProps> = ({ isOpen, onClose, test
           <div className="flex items-center gap-2 mb-2">
             <h2 className="text-xl font-bold leading-tight mr-2">{currentTestCase.title}</h2>
             <button
-              className="text-blue-100 hover:text-white transition-colors"
+              className="btn-icon-sm text-white bg-blue-500 hover:bg-blue-600 rounded-full p-1 shadow focus:outline-none focus:ring-2 focus:ring-blue-300"
               onClick={onEdit}
               aria-label="Редактировать"
               title="Редактировать"
             >
-              <PencilIcon className="w-5 h-5" />
+              <PencilIcon className="w-4 h-4" />
             </button>
           </div>
           <div className="flex items-center gap-4 text-sm text-blue-100">
@@ -121,11 +121,11 @@ const TestCaseSidebar: React.FC<TestCaseSidebarProps> = ({ isOpen, onClose, test
           </div>
         </div>
         <button
-          className="text-blue-100 hover:text-white transition-colors ml-2"
+          className="btn-icon-sm text-white bg-blue-500 hover:bg-blue-600 rounded-full p-1 shadow ml-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
           onClick={onClose}
           aria-label="Закрыть"
         >
-          <XMarkIcon className="w-6 h-6" />
+          <XMarkIcon className="w-5 h-5" />
         </button>
       </div>
 
@@ -215,5 +215,110 @@ const TestCaseSidebar: React.FC<TestCaseSidebarProps> = ({ isOpen, onClose, test
     </div>
   );
 };
+
+export const TestCaseSidebarView: React.FC<{
+  testCase: TestCase,
+  getPriorityColor: (priority: string) => string,
+  getStatusIcon: (status: string) => JSX.Element,
+  getStatusColor: (status: string) => string,
+}> = ({ testCase, getPriorityColor, getStatusIcon, getStatusColor }) => (
+  <div className="w-full">
+    {/* Header */}
+    <div className="bg-gradient-to-r from-blue-400 to-blue-500 text-white p-6 flex items-start justify-between rounded-t-lg">
+      <div className="flex-1 pr-4">
+        <div className="flex items-center gap-2 mb-2">
+          <h2 className="text-xl font-bold leading-tight mr-2">{testCase.title}</h2>
+        </div>
+        <div className="flex items-center gap-4 text-sm text-blue-100">
+          <div className="flex items-center gap-1">
+            <ClockIcon className="w-4 h-4" />
+            {testCase.createdAt && new Date(testCase.createdAt).toLocaleDateString()}
+          </div>
+          <div className="flex items-center gap-1">
+            <TagIcon className="w-4 h-4" />
+            ID: {testCase.id}
+          </div>
+        </div>
+      </div>
+    </div>
+    {/* Status Cards */}
+    <div className="grid grid-cols-2 gap-4 p-6 pt-4">
+      <div className="bg-white border rounded-lg p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          <TagIcon className="w-4 h-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-600">Приоритет</span>
+        </div>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getPriorityColor(testCase.priority)}`}>
+          {testCase.priority === 'critical' && 'Критический'}
+          {testCase.priority === 'high' && 'Высокий'}
+          {testCase.priority === 'medium' && 'Средний'}
+          {testCase.priority === 'low' && 'Низкий'}
+        </span>
+      </div>
+      <div className="bg-white border rounded-lg p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-2">
+          {getStatusIcon(testCase.status)}
+          <span className="text-sm font-medium text-gray-600">Статус</span>
+        </div>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(testCase.status)}`}>
+          {testCase.status === 'completed' && 'Завершен'}
+          {testCase.status === 'in_progress' && 'В процессе'}
+          {testCase.status === 'ready' && 'Готов к тестированию'}
+          {testCase.status === 'draft' && 'Черновик'}
+        </span>
+      </div>
+    </div>
+    {/* Description */}
+    {testCase.description && (
+      <div className="bg-white border rounded-lg p-4 mx-6 mb-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <InformationCircleIcon className="w-5 h-5 text-blue-500" />
+          <h3 className="text-lg font-semibold text-gray-800">Описание</h3>
+        </div>
+        <div className="text-gray-700 whitespace-pre-line leading-relaxed">
+          {testCase.description}
+        </div>
+      </div>
+    )}
+    {/* Preconditions */}
+    {testCase.preconditions && (
+      <div className="bg-white border rounded-lg p-4 mx-6 mb-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <CheckCircleIcon className="w-5 h-5 text-green-500" />
+          <h3 className="text-lg font-semibold text-gray-800">Предусловия</h3>
+        </div>
+        <div className="text-gray-700 whitespace-pre-line leading-relaxed">
+          {testCase.preconditions}
+        </div>
+      </div>
+    )}
+    {/* Steps */}
+    {testCase.steps && (
+      <div className="bg-white border rounded-lg p-4 mx-6 mb-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <DocumentTextIcon className="w-5 h-5 text-purple-500" />
+          <h3 className="text-lg font-semibold text-gray-800">Шаги выполнения</h3>
+        </div>
+        <ol className="list-decimal list-inside text-gray-700 text-base space-y-1">
+          {testCase.steps.split(/\n|\r|\d+\./).filter(s => s.trim()).map((step, idx) => (
+            <li key={idx}>{step.trim()}</li>
+          ))}
+        </ol>
+      </div>
+    )}
+    {/* Expected Result */}
+    {testCase.expectedResult && (
+      <div className="bg-white border rounded-lg p-4 mx-6 mb-6 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <CheckCircleIcon className="w-5 h-5 text-blue-500" />
+          <h3 className="text-lg font-semibold text-gray-800">Ожидаемый результат</h3>
+        </div>
+        <div className="text-gray-700 whitespace-pre-line leading-relaxed">
+          {testCase.expectedResult}
+        </div>
+      </div>
+    )}
+  </div>
+);
 
 export default TestCaseSidebar; 

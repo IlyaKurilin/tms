@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import CreateTestPlanModal from '../components/CreateTestPlanModal.tsx';
+import { useNavigate } from 'react-router-dom';
 
 interface TestPlan {
   id: number;
@@ -17,6 +18,7 @@ const TestPlans: React.FC = () => {
   const [testPlans, setTestPlans] = useState<TestPlan[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchTestPlans();
@@ -133,7 +135,7 @@ const TestPlans: React.FC = () => {
       ) : (
         <div className="grid gap-6">
           {testPlans.map((testPlan) => (
-            <div key={testPlan.id} className="card p-6">
+            <div key={testPlan.id} className="card p-6 cursor-pointer hover:bg-blue-50 transition" onClick={() => navigate(`/test-plans/${testPlan.id}`)}>
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
@@ -184,18 +186,18 @@ const TestPlans: React.FC = () => {
                 
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => {/* TODO: Редактирование */}}
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md"
-                    title="Редактировать"
+                    onClick={e => { e.stopPropagation(); navigate(`/test-plans/${testPlan.id}`); }}
+                    className="btn-icon"
+                    title="Открыть"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
                   
                   <button
-                    onClick={() => handleDeleteTestPlan(testPlan.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+                    onClick={e => { e.stopPropagation(); handleDeleteTestPlan(testPlan.id); }}
+                    className="btn-icon"
                     title="Удалить"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

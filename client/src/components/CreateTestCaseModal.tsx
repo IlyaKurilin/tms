@@ -15,13 +15,15 @@ interface CreateTestCaseModalProps {
   onClose: () => void;
   projectId: number;
   onSave: (testCase: any) => void;
+  sectionId?: number | null;
 }
 
 const CreateTestCaseModal: React.FC<CreateTestCaseModalProps> = ({
   isOpen,
   onClose,
   projectId,
-  onSave
+  onSave,
+  sectionId
 }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -31,11 +33,12 @@ const CreateTestCaseModal: React.FC<CreateTestCaseModalProps> = ({
     expectedResult: '',
     priority: 'medium',
     status: 'draft',
-    sectionId: null as number | null
+    sectionId: sectionId ?? null
   });
 
   const [sections, setSections] = useState<TestCaseSection[]>([]);
   const [loadingSections, setLoadingSections] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Загрузка разделов проекта
   useEffect(() => {
@@ -61,6 +64,22 @@ const CreateTestCaseModal: React.FC<CreateTestCaseModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (isOpen) {
+      setFormData(f => ({
+        ...f,
+        title: '',
+        description: '',
+        preconditions: '',
+        steps: '',
+        expectedResult: '',
+        priority: 'medium',
+        status: 'draft',
+        sectionId: sectionId ?? null
+      }));
+    }
+  }, [isOpen, sectionId]);
+
   const loadSections = async () => {
     try {
       setLoadingSections(true);
@@ -78,9 +97,21 @@ const CreateTestCaseModal: React.FC<CreateTestCaseModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.title.trim() || !formData.steps.trim() || !formData.expectedResult.trim()) {
+      setError('Поля "Заголовок", "Шаги выполнения" и "Ожидаемый результат" обязательны для заполнения.');
+      return;
+    }
+    setError(null);
+    let sectionIdToSend: number | null = null;
+    if (sectionId !== undefined && sectionId !== null) {
+      sectionIdToSend = Number(sectionId);
+    } else if (formData.sectionId !== undefined && formData.sectionId !== null) {
+      sectionIdToSend = Number(formData.sectionId);
+    }
     onSave({
       projectId,
-      ...formData
+      ...formData,
+      sectionId: sectionIdToSend
     });
     setFormData({
       title: '',
@@ -103,6 +134,9 @@ const CreateTestCaseModal: React.FC<CreateTestCaseModalProps> = ({
         <h2 className="text-xl font-bold mb-4">Создать тест-кейс</h2>
         
         <form id="create-testcase-form" onSubmit={handleSubmit}>
+          {error && (
+            <div className="mb-4 text-red-600 text-sm font-medium">{error}</div>
+          )}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Заголовок *
@@ -121,10 +155,10 @@ const CreateTestCaseModal: React.FC<CreateTestCaseModalProps> = ({
               Раздел
             </label>
             <select
-              value={formData.sectionId || ''}
+              value={formData.sectionId !== undefined && formData.sectionId !== null ? String(formData.sectionId) : ''}
               onChange={(e) => setFormData({ ...formData, sectionId: e.target.value ? Number(e.target.value) : null })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={loadingSections}
+              disabled={(sectionId !== undefined && sectionId !== null) || loadingSections}
             >
               <option value="">Без раздела</option>
               {sections.map(section => (
@@ -171,6 +205,7 @@ const CreateTestCaseModal: React.FC<CreateTestCaseModalProps> = ({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={4}
               placeholder="1. Открыть приложение&#10;2. Войти в систему&#10;3. Перейти в раздел..."
+              required
             />
           </div>
 
@@ -183,6 +218,7 @@ const CreateTestCaseModal: React.FC<CreateTestCaseModalProps> = ({
               onChange={(e) => setFormData({ ...formData, expectedResult: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={3}
+              required
             />
           </div>
 

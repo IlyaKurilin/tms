@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CreateTestRunModal from '../components/CreateTestRunModal.tsx';
 import TestRunResults from '../components/TestRunResults.tsx';
+import { useNavigate } from 'react-router-dom';
 
 interface TestRun {
   id: number;
@@ -26,6 +27,7 @@ const TestRuns: React.FC = () => {
   const [isResultsModalOpen, setIsResultsModalOpen] = useState(false);
   const [selectedTestRunId, setSelectedTestRunId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchTestRuns();
@@ -200,12 +202,12 @@ const TestRuns: React.FC = () => {
       ) : (
         <div className="grid gap-6">
           {testRuns.map((testRun) => (
-            <div key={testRun.id} className="card p-6">
+            <div key={testRun.id} className="card p-6 cursor-pointer hover:bg-blue-50 transition" onClick={() => navigate(`/test-runs/${testRun.id}`)}>
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center space-x-3 mb-2">
                     <h3 className="text-lg font-semibold text-gray-900">
-                      {testRun.name}
+                      {testRun.test_plan_name}
                     </h3>
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(testRun.status)}`}>
                       {getStatusText(testRun.status)}
@@ -277,27 +279,31 @@ const TestRuns: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   {testRun.status === 'planned' && (
                     <button
-                      onClick={() => handleStartTestRun(testRun.id)}
-                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                      onClick={e => { e.stopPropagation(); handleStartTestRun(testRun.id); }}
+                      className="btn-icon"
                       title="Запустить"
                     >
-                      Запустить
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </button>
                   )}
                   
                   {testRun.status === 'in_progress' && (
                     <button
-                      onClick={() => handleCompleteTestRun(testRun.id)}
-                      className="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
+                      onClick={e => { e.stopPropagation(); handleCompleteTestRun(testRun.id); }}
+                      className="btn-icon"
                       title="Завершить"
                     >
-                      Завершить
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
                     </button>
                   )}
                   
                   <button
-                    onClick={() => handleViewResults(testRun.id)}
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md"
+                    onClick={e => { e.stopPropagation(); handleViewResults(testRun.id); }}
+                    className="btn-icon"
                     title="Просмотр результатов"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -307,8 +313,8 @@ const TestRuns: React.FC = () => {
                   </button>
                   
                   <button
-                    onClick={() => handleDeleteTestRun(testRun.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+                    onClick={e => { e.stopPropagation(); handleDeleteTestRun(testRun.id); }}
+                    className="btn-icon"
                     title="Удалить"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
