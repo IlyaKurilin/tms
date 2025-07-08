@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AddTestCasesToPlanModal from '../components/AddTestCasesToPlanModal.tsx';
 import TestCaseSidebar from '../components/TestCaseSidebar.tsx';
+import { ChevronRightIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 
 interface TestPlan {
   id: number;
@@ -34,6 +35,7 @@ const TestPlanDetail: React.FC = () => {
   const [selectedTestCase, setSelectedTestCase] = useState<TestCase | null>(null);
   const [sections, setSections] = useState<any[]>([]);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
+  const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchTestPlan();
@@ -99,15 +101,27 @@ const TestPlanDetail: React.FC = () => {
     const childSections = getChildSections(section.id);
     const sectionCases = getSectionTestCases(section.id);
     const isExpanded = expandedSections.has(section.id);
+    const isSelected = selectedSectionId === section.id;
     return (
       <div key={section.id} style={{ marginLeft: level * 16 }}>
-        <div className="flex items-center font-semibold text-gray-800 py-1" style={{ fontSize: 14 }}>
+        <div className={`flex items-center font-semibold text-gray-800 py-1 rounded cursor-pointer ${isSelected ? 'bg-blue-100' : ''}`} style={{ fontSize: 14 }}>
           {(childSections.length > 0 || sectionCases.length > 0) && (
-            <button type="button" onClick={() => handleToggleSection(section.id)} className="mr-1 text-gray-500 hover:text-gray-800">
-              {isExpanded ? '▼' : '▶'}
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); handleToggleSection(section.id); }}
+              className="mr-1 p-0.5 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-800 focus:outline-none"
+              style={{ lineHeight: 0 }}
+            >
+              {isExpanded ? (
+                <ChevronDownIcon className="w-4 h-4" />
+              ) : (
+                <ChevronRightIcon className="w-4 h-4" />
+              )}
             </button>
           )}
-          <span>{section.name}</span>
+          <span onClick={() => setSelectedSectionId(section.id)} className="flex-1 select-none">
+            {section.name}
+          </span>
         </div>
         {isExpanded && (
           <div>

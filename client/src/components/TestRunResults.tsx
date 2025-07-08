@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { PlayIcon, PauseIcon, StopIcon, InformationCircleIcon, CheckCircleIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
-import { TestCaseSidebarView } from './TestCaseSidebar.tsx';
+import React, { useEffect, useState } from 'react';
+import { CheckCircleIcon, XMarkIcon, InformationCircleIcon, DocumentTextIcon, PauseIcon, PlayIcon, StopIcon } from '@heroicons/react/24/outline';
 
 interface TestResult {
   id: number;
@@ -24,21 +23,217 @@ interface TestRunResultsProps {
   onClose: () => void;
 }
 
-const TestRunResults: React.FC<TestRunResultsProps> = ({
-  testRunId,
-  isOpen,
-  onClose
-}) => {
+const statusMap: Record<string, { label: string; color: string }> = {
+  passed: { label: 'Пройден', color: 'bg-green-100 text-green-800' },
+  failed: { label: 'Провален', color: 'bg-red-100 text-red-800' },
+  blocked: { label: 'Заблокирован', color: 'bg-yellow-100 text-yellow-800' },
+  not_run: { label: 'Не выполнен', color: 'bg-gray-100 text-gray-800' },
+  in_progress: { label: 'Выполняется', color: 'bg-blue-100 text-blue-800' },
+};
+
+const priorityMap: Record<string, { label: string; color: string }> = {
+  high: { label: 'Высокий', color: 'bg-red-100 text-red-800' },
+  medium: { label: 'Средний', color: 'bg-yellow-100 text-yellow-800' },
+  low: { label: 'Низкий', color: 'bg-green-100 text-green-800' },
+};
+
+const TestRunCaseCard: React.FC<{
+  result: TestResult;
+  onStatusChange: (status: string) => void;
+  onNotesChange: (notes: string) => void;
+  timer?: string;
+  onStart?: () => void;
+  onPause?: () => void;
+  onStop?: () => void;
+}> = ({ result, onStatusChange, onNotesChange, timer, onStart, onPause, onStop }) => (
+  <div className="bg-white rounded-xl shadow p-6 mb-6">
+    <div className="flex justify-between items-start mb-2">
+      <div>
+        <h3 className="text-lg font-bold text-gray-900 mb-1">{result.test_case_title}</h3>
+        <div className="flex items-center gap-2 mb-2">
+          <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${priorityMap[result.test_case_priority]?.color || 'bg-gray-100 text-gray-800'}`}>{priorityMap[result.test_case_priority]?.label || result.test_case_priority}</span>
+          <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${statusMap[result.status]?.color || 'bg-gray-100 text-gray-800'}`}>{statusMap[result.status]?.label || result.status}</span>
+          {result.executed_by_name && (
+            <span className="text-xs text-gray-500 ml-2">Выполнил: {result.executed_by_name}</span>
+          )}
+          {result.executed_at && (
+            <span className="text-xs text-gray-500 ml-2">{new Date(result.executed_at).toLocaleString('ru-RU')}</span>
+          )}
+        </div>
+      </div>
+      <button className="text-gray-400 hover:text-gray-600" title="Скрыть детали">
+        <XMarkIcon className="w-5 h-5" />
+      </button>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <div className="mb-2">
+          <span className="block text-xs font-semibold text-gray-500 mb-1">Описание</span>
+          <div className="text-gray-700 text-sm whitespace-pre-line">{result.test_case_description || '-'}</div>
+        </div>
+        <div className="mb-2">
+          <span className="block text-xs font-semibold text-gray-500 mb-1">Предусловия</span>
+          <div className="text-gray-700 text-sm whitespace-pre-line">{result.preconditions || '-'}</div>
+        </div>
+        <div className="mb-2">
+          <span className="block text-xs font-semibold text-gray-500 mb-1">Шаги</span>
+          <div className="text-gray-700 text-sm whitespace-pre-line">{result.steps || '-'}</div>
+        </div>
+        <div className="mb-2">
+          <span className="block text-xs font-semibold text-gray-500 mb-1">Ожидаемый результат</span>
+          <div className="text-gray-700 text-sm whitespace-pre-line">{result.expected_result || '-'}</div>
+        </div>
+      </div>
+      <div>
+        <div className="mb-2">
+          <span className="block text-xs font-semibold text-gray-500 mb-1">Статус</span>
+          <select
+            value={result.status}
+            onChange={e => onStatusChange(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="not_run">Не выполнен</option>
+            <option value="in_progress">Выполняется</option>
+            <option value="passed">Пройден</option>
+            <option value="failed">Провален</option>
+            <option value="blocked">Заблокирован</option>
+          </select>
+        </div>
+        <div className="mb-2">
+          <span className="block text-xs font-semibold text-gray-500 mb-1">Заметки</span>
+          <textarea
+            value={result.notes || ''}
+            onChange={e => onNotesChange(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            rows={3}
+            placeholder="Добавьте заметки о результате теста..."
+          />
+        </div>
+        {result.status === 'in_progress' && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-gray-500">Таймер:</span>
+            <span className="font-mono text-base text-blue-600">{timer}</span>
+            <button className="p-1 rounded hover:bg-gray-100" onClick={onPause} title="Пауза"><PauseIcon className="w-4 h-4" /></button>
+            <button className="p-1 rounded hover:bg-gray-100" onClick={onStop} title="Стоп"><StopIcon className="w-4 h-4" /></button>
+          </div>
+        )}
+        {result.status !== 'in_progress' && (
+          <button className="mt-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs flex items-center gap-1" onClick={onStart}>
+            <PlayIcon className="w-4 h-4" /> Старт
+          </button>
+        )}
+      </div>
+    </div>
+  </div>
+);
+
+const TestRunSidebar: React.FC<{
+  result: TestResult | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onStatusChange: (status: string) => void;
+  onNotesChange: (notes: string) => void;
+  timer?: string;
+  onStart?: () => void;
+  onPause?: () => void;
+  onStop?: () => void;
+}> = ({ result, isOpen, onClose, onStatusChange, onNotesChange, timer, onStart, onPause, onStop }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col transition-transform duration-300" style={{ transform: isOpen ? 'translateX(0)' : 'translateX(100%)' }}>
+      <div className="bg-blue-600 text-white px-6 py-4 flex items-center justify-between rounded-t-lg">
+        <div>
+          <h2 className="text-lg font-bold leading-tight">{result?.test_case_title}</h2>
+          <div className="flex items-center gap-2 text-xs mt-1">
+            <span className="opacity-80">ID: {result?.test_case_id}</span>
+          </div>
+        </div>
+        <button className="text-white hover:text-gray-200" onClick={onClose}><XMarkIcon className="w-6 h-6" /></button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="bg-white rounded-xl shadow p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircleIcon className="w-4 h-4 text-gray-400" />
+            <span className="text-sm font-semibold text-gray-700">Описание</span>
+          </div>
+          <div className="text-gray-700 text-sm whitespace-pre-line">{result?.test_case_description || '-'}</div>
+        </div>
+        <div className="bg-white rounded-xl shadow p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <InformationCircleIcon className="w-4 h-4 text-green-400" />
+            <span className="text-sm font-semibold text-gray-700">Предусловия</span>
+          </div>
+          <div className="text-gray-700 text-sm whitespace-pre-line">{result?.preconditions || '-'}</div>
+        </div>
+        <div className="bg-white rounded-xl shadow p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <DocumentTextIcon className="w-4 h-4 text-purple-400" />
+            <span className="text-sm font-semibold text-gray-700">Шаги выполнения</span>
+          </div>
+          <div className="text-gray-700 text-sm whitespace-pre-line">{result?.steps || '-'}</div>
+        </div>
+        <div className="bg-white rounded-xl shadow p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircleIcon className="w-4 h-4 text-blue-400" />
+            <span className="text-sm font-semibold text-gray-700">Ожидаемый результат</span>
+          </div>
+          <div className="text-gray-700 text-sm whitespace-pre-line">{result?.expected_result || '-'}</div>
+        </div>
+        <div className="bg-white rounded-xl shadow p-4">
+          <div className="mb-2">
+            <span className="block text-xs font-semibold text-gray-500 mb-1">Статус</span>
+            <select
+              value={result?.status}
+              onChange={e => onStatusChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="not_run">Не выполнен</option>
+              <option value="in_progress">Выполняется</option>
+              <option value="passed">Пройден</option>
+              <option value="failed">Провален</option>
+              <option value="blocked">Заблокирован</option>
+            </select>
+          </div>
+          <div className="mb-2">
+            <span className="block text-xs font-semibold text-gray-500 mb-1">Заметки</span>
+            <textarea
+              value={result?.notes || ''}
+              onChange={e => onNotesChange(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={3}
+              placeholder="Добавьте заметки о результате теста..."
+            />
+          </div>
+          {result?.status === 'in_progress' && timer && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-xs text-gray-500">Таймер:</span>
+              <span className="font-mono text-base text-blue-600">{timer}</span>
+              <button className="p-1 rounded hover:bg-gray-100" onClick={onPause} title="Пауза"><PauseIcon className="w-4 h-4" /></button>
+              <button className="p-1 rounded hover:bg-gray-100" onClick={onStop} title="Стоп"><StopIcon className="w-4 h-4" /></button>
+            </div>
+          )}
+          {result?.status !== 'in_progress' && (
+            <button className="mt-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs flex items-center gap-1" onClick={onStart}>
+              <PlayIcon className="w-4 h-4" /> Старт
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const TestRunResults: React.FC<TestRunResultsProps> = ({ testRunId, isOpen, onClose }) => {
   const [results, setResults] = useState<TestResult[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timers, setTimers] = useState<{ [key: number]: number }>({}); // test_case_id: seconds
+  const [timers, setTimers] = useState<{ [key: number]: number }>({});
   const [timerIntervals, setTimerIntervals] = useState<{ [key: number]: NodeJS.Timeout }>({});
+  const [sidebarResult, setSidebarResult] = useState<TestResult | null>(null);
 
   useEffect(() => {
     if (isOpen && testRunId) {
       fetchResults();
     } else {
-      // Очищаем таймеры при закрытии модального окна
       Object.values(timerIntervals).forEach(clearInterval);
       setTimerIntervals({});
       setTimers({});
@@ -51,8 +246,7 @@ const TestRunResults: React.FC<TestRunResultsProps> = ({
       const response = await fetch(`/api/test-runs/${testRunId}/results`);
       const data = await response.json();
       setResults(data);
-      
-      // Инициализация таймеров для in_progress
+      // Таймеры для in_progress
       const timersInit: { [key: number]: number } = {};
       data.forEach((result: any) => {
         if (result.status === 'in_progress' && result.executed_at) {
@@ -63,7 +257,7 @@ const TestRunResults: React.FC<TestRunResultsProps> = ({
       });
       setTimers(timersInit);
     } catch (error) {
-      console.error('Ошибка загрузки результатов:', error);
+      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -71,10 +265,7 @@ const TestRunResults: React.FC<TestRunResultsProps> = ({
 
   // Таймеры для in_progress
   useEffect(() => {
-    // Очищаем старые интервалы
     Object.values(timerIntervals).forEach(clearInterval);
-    
-    // Создаем новые интервалы для активных таймеров
     const newIntervals: { [key: number]: NodeJS.Timeout } = {};
     Object.entries(timers).forEach(([testCaseId, seconds]) => {
       const interval = setInterval(() => {
@@ -82,9 +273,7 @@ const TestRunResults: React.FC<TestRunResultsProps> = ({
       }, 1000);
       newIntervals[testCaseId] = interval;
     });
-    
     setTimerIntervals(newIntervals);
-    
     return () => {
       Object.values(newIntervals).forEach(clearInterval);
     };
@@ -97,231 +286,66 @@ const TestRunResults: React.FC<TestRunResultsProps> = ({
   };
 
   const updateTestResult = async (testCaseId: number, status: string, notes?: string) => {
+    console.log('PUT /api/test-runs/' + testRunId + '/results/' + testCaseId, { status, notes });
     try {
       const response = await fetch(`/api/test-runs/${testRunId}/results/${testCaseId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status,
-          notes: notes || ''
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, notes: notes || '' }),
       });
-
       if (response.ok) {
         const updatedResult = await response.json();
-        setResults(results.map(result => 
-          result.test_case_id === testCaseId ? { ...result, ...updatedResult } : result
-        ));
-        
-        // Обработка таймеров при изменении статуса
-        if (status === 'in_progress') {
-          // Запускаем таймер для нового in_progress
-          if (!timers[testCaseId]) {
-            setTimers(prev => ({ ...prev, [testCaseId]: 0 }));
-          }
-        } else {
-          // Останавливаем таймер для других статусов
-          if (timers[testCaseId] !== undefined) {
-            setTimers(prev => {
-              const newTimers = { ...prev };
-              delete newTimers[testCaseId];
-              return newTimers;
-            });
-            
-            // Очищаем интервал
-            if (timerIntervals[testCaseId]) {
-              clearInterval(timerIntervals[testCaseId]);
-              setTimerIntervals(prev => {
-                const newIntervals = { ...prev };
-                delete newIntervals[testCaseId];
-                return newIntervals;
-              });
-            }
-          }
-        }
-      } else {
-        const error = await response.json();
-        alert(error.error || 'Ошибка обновления результата');
+        setResults(results.map(result => result.test_case_id === testCaseId ? { ...result, ...updatedResult } : result));
       }
-    } catch (error) {
-      console.error('Ошибка обновления результата:', error);
-      alert('Ошибка обновления результата');
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'passed':
-        return 'bg-green-100 text-green-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      case 'blocked':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'not_run':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'passed':
-        return 'Пройден';
-      case 'failed':
-        return 'Провален';
-      case 'blocked':
-        return 'Заблокирован';
-      case 'not_run':
-        return 'Не выполнен';
-      default:
-        return status;
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'Высокий';
-      case 'medium':
-        return 'Средний';
-      case 'low':
-        return 'Низкий';
-      default:
-        return priority;
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'passed':
-        return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
-      case 'failed':
-        return <CheckCircleIcon className="w-5 h-5 text-red-500" />;
-      case 'blocked':
-        return <InformationCircleIcon className="w-5 h-5 text-yellow-500" />;
-      case 'not_run':
-        return <InformationCircleIcon className="w-5 h-5 text-gray-500" />;
-      default:
-        return <InformationCircleIcon className="w-5 h-5 text-gray-500" />;
-    }
+    } catch {}
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <div className="flex justify-between items-center p-6 border-b">
-          <h2 className="text-xl font-semibold text-gray-900">Результаты тестового прогона</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+      <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto shadow-xl relative">
+        <div className="sticky top-0 z-10 bg-white rounded-t-2xl border-b px-8 py-6 flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-900">Тестовые прогоны</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <XMarkIcon className="w-7 h-7" />
           </button>
         </div>
-
-        <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
+        <div className="px-8 py-6">
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : (
-            <div className="p-6 space-y-6">
-              {results.map((result) => (
-                <div key={result.id} className="border rounded-lg p-6 bg-gray-50 shadow-sm">
-                  {/* Заголовок и статус */}
-                  <div className="flex justify-between items-start mb-4 pb-4 border-b">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-1">{result.test_case_title}</h3>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${getPriorityColor(result.test_case_priority)}`}>{getPriorityText(result.test_case_priority)}</span>
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(result.status)}`}>{getStatusText(result.status)}</span>
-                        {result.executed_by_name && (
-                          <span className="text-xs text-gray-500 ml-2">Выполнил: {result.executed_by_name}</span>
-                        )}
-                        {result.executed_at && (
-                          <span className="text-xs text-gray-500 ml-2">{new Date(result.executed_at).toLocaleString('ru-RU')}</span>
-                        )}
-                      </div>
-                    </div>
-                    {/* Таймер */}
-                    {result.status === 'in_progress' && (
-                      <div className="flex flex-col items-end">
-                        <span className="text-xs text-gray-500 mb-1">Таймер</span>
-                        <span className="font-mono text-lg text-blue-600">{formatTime(timers[result.test_case_id] || 0)}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Детали тест-кейса */}
-                  <TestCaseSidebarView
-                    testCase={{
-                      id: result.test_case_id,
-                      title: result.test_case_title,
-                      description: result.test_case_description,
-                      preconditions: result.preconditions,
-                      steps: result.steps,
-                      expectedResult: result.expected_result,
-                      priority: result.test_case_priority,
-                      status: result.status,
-                      createdAt: result.executed_at,
-                    }}
-                    getPriorityColor={getPriorityColor}
-                    getStatusIcon={getStatusIcon}
-                    getStatusColor={getStatusColor}
+            <>
+              {results.length === 0 && <div className="text-gray-500 text-center py-12">Нет результатов для этого прогона</div>}
+              {results.map(result => (
+                <div key={result.id} onClick={() => setSidebarResult(result)} className="cursor-pointer">
+                  <TestRunCaseCard
+                    result={result}
+                    timer={timers[result.test_case_id] !== undefined ? formatTime(timers[result.test_case_id]) : undefined}
+                    onStatusChange={status => updateTestResult(result.test_case_id, status, result.notes)}
+                    onNotesChange={notes => updateTestResult(result.test_case_id, result.status, notes)}
+                    onStart={() => updateTestResult(result.test_case_id, 'in_progress', result.notes)}
+                    onPause={() => updateTestResult(result.test_case_id, 'not_run', result.notes)}
+                    onStop={() => updateTestResult(result.test_case_id, 'not_run', result.notes)}
                   />
-
-                  {/* Статус и заметки */}
-                  <div className="pt-4 mt-4 border-t">
-                    <div className="mb-3">
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">Статус</label>
-                      <select
-                        value={result.status}
-                        onChange={(e) => updateTestResult(result.test_case_id, e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="not_run">Не выполнен</option>
-                        <option value="passed">Пройден</option>
-                        <option value="failed">Провален</option>
-                        <option value="blocked">Заблокирован</option>
-                        <option value="in_progress">В процессе</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">Заметки</label>
-                      <textarea
-                        value={result.notes || ''}
-                        onChange={(e) => updateTestResult(result.test_case_id, result.status, e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        rows={3}
-                        placeholder="Добавьте заметки о результате теста..."
-                      />
-                    </div>
-                  </div>
                 </div>
               ))}
-            </div>
+            </>
           )}
         </div>
+        <TestRunSidebar
+          result={sidebarResult}
+          isOpen={!!sidebarResult}
+          onClose={() => setSidebarResult(null)}
+          onStatusChange={status => sidebarResult && updateTestResult(sidebarResult.test_case_id, status, sidebarResult.notes)}
+          onNotesChange={notes => sidebarResult && updateTestResult(sidebarResult.test_case_id, sidebarResult.status, notes)}
+          timer={sidebarResult && timers[sidebarResult.test_case_id] !== undefined ? formatTime(timers[sidebarResult.test_case_id]) : undefined}
+          onStart={() => sidebarResult && updateTestResult(sidebarResult.test_case_id, 'in_progress', sidebarResult.notes)}
+          onPause={() => sidebarResult && updateTestResult(sidebarResult.test_case_id, 'not_run', sidebarResult.notes)}
+          onStop={() => sidebarResult && updateTestResult(sidebarResult.test_case_id, 'not_run', sidebarResult.notes)}
+        />
       </div>
     </div>
   );

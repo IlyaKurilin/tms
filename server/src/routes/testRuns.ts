@@ -95,7 +95,7 @@ router.post('/', async (req: Request, res: Response) => {
     if (!testPlanId || !name) {
       return res.status(400).json({ error: 'ID тест-плана и название обязательны' });
     }
-    
+    console.log('[CREATE TEST RUN] testPlanId:', testPlanId, 'name:', name);
     // Создаем тестовый прогон
     const result = await query(
       `INSERT INTO test_runs (
@@ -105,15 +105,16 @@ router.post('/', async (req: Request, res: Response) => {
     );
     
     const testRun = result.rows[0];
-    
+    console.log('[CREATE TEST RUN] created test_run_id:', testRun.id);
     // Получаем все тест-кейсы тест-плана
     const testCasesResult = await query(
       'SELECT id FROM test_cases WHERE test_plan_id = $1',
       [testPlanId]
     );
-    
+    console.log('[CREATE TEST RUN] found test_case_ids:', testCasesResult.rows.map(r => r.id));
     // Создаем записи результатов для каждого тест-кейса
     for (const testCase of testCasesResult.rows) {
+      console.log('[CREATE TEST RUN] insert test_result:', { test_run_id: testRun.id, test_case_id: testCase.id });
       await query(
         `INSERT INTO test_results (
           test_run_id, test_case_id, status, created_at
@@ -124,6 +125,7 @@ router.post('/', async (req: Request, res: Response) => {
     
     return res.status(201).json(testRun);
   } catch (error) {
+    console.error('[CREATE TEST RUN] error:', error);
     return res.status(500).json({ error: 'Ошибка создания тестового прогона' });
   }
 });

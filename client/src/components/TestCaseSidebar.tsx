@@ -222,14 +222,15 @@ export const TestCaseSidebarView: React.FC<{
   getStatusIcon: (status: string) => JSX.Element,
   getStatusColor: (status: string) => string,
 }> = ({ testCase, getPriorityColor, getStatusIcon, getStatusColor }) => (
-  <div className="w-full">
+  <div className="w-full bg-gray-50 rounded-lg shadow p-0">
+    <div className="text-red-600 font-bold text-center">TEST CHANGE</div>
     {/* Header */}
-    <div className="bg-gradient-to-r from-blue-400 to-blue-500 text-white p-6 flex items-start justify-between rounded-t-lg">
+    <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-4 flex items-center justify-between rounded-t-lg">
       <div className="flex-1 pr-4">
-        <div className="flex items-center gap-2 mb-2">
-          <h2 className="text-xl font-bold leading-tight mr-2">{testCase.title}</h2>
+        <div className="flex items-center gap-2 mb-1">
+          <h2 className="text-lg font-bold leading-tight mr-2">{testCase.title}</h2>
         </div>
-        <div className="flex items-center gap-4 text-sm text-blue-100">
+        <div className="flex items-center gap-4 text-xs text-blue-100">
           <div className="flex items-center gap-1">
             <ClockIcon className="w-4 h-4" />
             {testCase.createdAt && new Date(testCase.createdAt).toLocaleDateString()}
@@ -242,25 +243,25 @@ export const TestCaseSidebarView: React.FC<{
       </div>
     </div>
     {/* Status Cards */}
-    <div className="grid grid-cols-2 gap-4 p-6 pt-4">
-      <div className="bg-white border rounded-lg p-4 shadow-sm">
+    <div className="grid grid-cols-2 gap-4 px-6 pt-4">
+      <div className="bg-white rounded-lg p-4 shadow">
         <div className="flex items-center gap-2 mb-2">
           <TagIcon className="w-4 h-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-600">Приоритет</span>
+          <span className="text-xs font-medium text-gray-600">Приоритет</span>
         </div>
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getPriorityColor(testCase.priority)}`}>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${getPriorityColor(testCase.priority)}`}> 
           {testCase.priority === 'critical' && 'Критический'}
           {testCase.priority === 'high' && 'Высокий'}
           {testCase.priority === 'medium' && 'Средний'}
           {testCase.priority === 'low' && 'Низкий'}
         </span>
       </div>
-      <div className="bg-white border rounded-lg p-4 shadow-sm">
+      <div className="bg-white rounded-lg p-4 shadow">
         <div className="flex items-center gap-2 mb-2">
           {getStatusIcon(testCase.status)}
-          <span className="text-sm font-medium text-gray-600">Статус</span>
+          <span className="text-xs font-medium text-gray-600">Статус</span>
         </div>
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(testCase.status)}`}>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${getStatusColor(testCase.status)}`}> 
           {testCase.status === 'completed' && 'Завершен'}
           {testCase.status === 'in_progress' && 'В процессе'}
           {testCase.status === 'ready' && 'Готов к тестированию'}
@@ -270,36 +271,36 @@ export const TestCaseSidebarView: React.FC<{
     </div>
     {/* Description */}
     {testCase.description && (
-      <div className="bg-white border rounded-lg p-4 mx-6 mb-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="bg-white rounded-lg p-4 mx-6 mb-4 mt-4 shadow">
+        <div className="flex items-center gap-2 mb-2">
           <InformationCircleIcon className="w-5 h-5 text-blue-500" />
-          <h3 className="text-lg font-semibold text-gray-800">Описание</h3>
+          <h3 className="text-base font-semibold text-gray-800">Описание</h3>
         </div>
-        <div className="text-gray-700 whitespace-pre-line leading-relaxed">
+        <div className="text-gray-700 whitespace-pre-line leading-relaxed text-sm">
           {testCase.description}
         </div>
       </div>
     )}
     {/* Preconditions */}
     {testCase.preconditions && (
-      <div className="bg-white border rounded-lg p-4 mx-6 mb-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="bg-white rounded-lg p-4 mx-6 mb-4 shadow">
+        <div className="flex items-center gap-2 mb-2">
           <CheckCircleIcon className="w-5 h-5 text-green-500" />
-          <h3 className="text-lg font-semibold text-gray-800">Предусловия</h3>
+          <h3 className="text-base font-semibold text-gray-800">Предусловия</h3>
         </div>
-        <div className="text-gray-700 whitespace-pre-line leading-relaxed">
+        <div className="text-gray-700 whitespace-pre-line leading-relaxed text-sm">
           {testCase.preconditions}
         </div>
       </div>
     )}
     {/* Steps */}
     {testCase.steps && (
-      <div className="bg-white border rounded-lg p-4 mx-6 mb-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="bg-white rounded-lg p-4 mx-6 mb-4 shadow">
+        <div className="flex items-center gap-2 mb-2">
           <DocumentTextIcon className="w-5 h-5 text-purple-500" />
-          <h3 className="text-lg font-semibold text-gray-800">Шаги выполнения</h3>
+          <h3 className="text-base font-semibold text-gray-800">Шаги выполнения</h3>
         </div>
-        <ol className="list-decimal list-inside text-gray-700 text-base space-y-1">
+        <ol className="list-decimal list-inside text-gray-700 text-sm space-y-1">
           {testCase.steps.split(/\n|\r|\d+\./).filter(s => s.trim()).map((step, idx) => (
             <li key={idx}>{step.trim()}</li>
           ))}
@@ -308,12 +309,12 @@ export const TestCaseSidebarView: React.FC<{
     )}
     {/* Expected Result */}
     {testCase.expectedResult && (
-      <div className="bg-white border rounded-lg p-4 mx-6 mb-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="bg-white rounded-lg p-4 mx-6 mb-4 shadow">
+        <div className="flex items-center gap-2 mb-2">
           <CheckCircleIcon className="w-5 h-5 text-blue-500" />
-          <h3 className="text-lg font-semibold text-gray-800">Ожидаемый результат</h3>
+          <h3 className="text-base font-semibold text-gray-800">Ожидаемый результат</h3>
         </div>
-        <div className="text-gray-700 whitespace-pre-line leading-relaxed">
+        <div className="text-gray-700 whitespace-pre-line leading-relaxed text-sm">
           {testCase.expectedResult}
         </div>
       </div>

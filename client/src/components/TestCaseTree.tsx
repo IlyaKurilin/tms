@@ -355,12 +355,12 @@ const TestCaseTree: React.FC<TestCaseTreeProps> = ({
           {(childSections.length > 0 || sectionTestCases.length > 0) && (
             <button
               onClick={() => toggleSection(section.id)}
-              className="p-1 hover:bg-gray-200 rounded"
+              className="p-0.5 hover:bg-gray-200 rounded"
             >
               {isExpanded ? (
-                <ChevronDownIcon className="w-4 h-4" />
+                <ChevronDownIcon className="w-3 h-3" />
               ) : (
-                <ChevronRightIcon className="w-4 h-4" />
+                <ChevronRightIcon className="w-3 h-3" />
               )}
             </button>
           )}
